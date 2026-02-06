@@ -1,0 +1,62 @@
+# .claudeディレクトリの管理（スキル）
+- name: .claude
+  lang: any
+  tree:
+    - name: skills
+      tree:
+        - from: https://github.com/itton-claude-skills/moli.git
+        - from: https://github.com/itton-claude-skills/expert-skill-make.git
+        - from: https://github.com/itton-claude-skills/expert-skill-edit.git
+        - from: https://github.com/itton-claude-skills/expert-git-commit.git
+
+# koiプロジェクト本体
+- name: koi
+  root: true
+  lang: rust
+  tree:
+    - name: src
+      file:
+        - name: main  # CLIエントリーポイント
+      tree:
+        # コマンド層（clapによるCLI定義）
+        - name: cli
+          file:
+            - name: args      # コマンドライン引数の定義
+            - name: commands  # サブコマンドの列挙と実行
+
+        # コマンド実装層
+        - name: commands
+          file:
+            - name: clone     # スキルの取得
+            - name: pull      # スキルの更新
+            - name: push      # スキルの公開
+            - name: list      # インストール済みスキルの一覧
+            - name: remove    # スキルの削除
+
+        # リポジトリ管理層（Git操作）
+        - name: repository
+          file:
+            - name: git       # Git操作のラッパー (clone, pull, push)
+            - name: remote    # リモートリポジトリ情報の管理
+            - name: config    # リポジトリ設定の読み書き
+
+        # スキル管理層
+        - name: skill
+          file:
+            - name: metadata  # スキルのメタデータ (SKILL.md解析)
+            - name: path      # スキルのパス解決
+            - name: validator # スキルの妥当性検証
+
+        # 対話的UI層（dioxus）
+        - name: ui
+          file:
+            - name: fuzzy     # 曖昧検索のインタラクティブUI
+            - name: prompt    # 確認プロンプト
+            - name: progress  # 進行状況表示
+
+        # ユーティリティ層
+        - name: utils
+          file:
+            - name: fs        # ファイルシステム操作
+            - name: error     # エラー型の定義
+            - name: config    # 設定ファイルの読み書き

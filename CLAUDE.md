@@ -139,3 +139,28 @@ expert-skill-make = "itton-claude-skills/expert-skill-make"
 5. skill層: スキル管理ロジック
 6. ui層: dioxusによる対話的UI
 7. utils層: 共通ユーティリティ
+
+### 2026-02-06: Phase 1 実装完了
+
+**実装済み（Phase 1）**:
+- utils層: error.rs, config.rs, fs.rs
+- skill層: path.rs, lockfile.rs, metadata.rs, validator.rs
+- github層: auth.rs（gh auth setup-git含む）, api.rs, repo.rs
+- git層: command.rs, clone.rs（HTTPS URL）, sync.rs
+- ui層: fuzzy.rs（番号選択）, prompt.rs（y/n確認）, progress.rs（println!ベース）
+- cli層: args.rs（clap定義）, commands.rs（ディスパッチ）
+- commands層: install.rs（曖昧検索+--restore）, list.rs, uninstall.rs, remote.rs（set-org）
+- main.rs
+
+**スタブ（Phase 2で実装予定）**:
+- commands/update.rs - `koi update`（git stash + git pull）
+- commands/new.rs - `koi new`（リモートリポジトリ作成 + clone）
+- commands/remote.rs の `run_update` - `koi remote update`（git add + commit + push）
+
+**Phase 3で実装予定**:
+- ui層をdioxusベースの曖昧検索UIに置き換え（現在は番号選択の簡易UI）
+
+**技術的決定事項**:
+- clone URLはHTTPS（`https://github.com/{org}/{repo}.git`）を使用
+- `gh auth setup-git` でHTTPS pushの認証を確保
+- gitの操作はすべて `git -C <dir>` で対象ディレクトリを指定

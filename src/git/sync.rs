@@ -18,9 +18,13 @@ pub fn pull(dir: &Path) -> Result<()> {
     Ok(())
 }
 
-pub fn push_all(dir: &Path) -> Result<()> {
+pub fn add_and_commit(dir: &Path) -> Result<()> {
     git_in_dir(dir, &["add", "-A"])?;
     git_in_dir(dir, &["commit", "--no-verify", "-m", "update skill"])?;
+    Ok(())
+}
+
+pub fn push(dir: &Path) -> Result<()> {
     git_in_dir(dir, &["push", "--no-verify"])?;
     Ok(())
 }

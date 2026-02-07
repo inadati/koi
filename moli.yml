@@ -27,18 +27,26 @@
         # コマンド実装層
         - name: commands
           file:
-            - name: clone     # スキルの取得
-            - name: pull      # スキルの更新
-            - name: push      # スキルの公開
+            - name: install   # スキルの取得 / --restore で .koi.skills から一括復元
+            - name: update    # リモートからローカルへ同期（pull）
+            - name: new       # リモートに新規スキルリポジトリ作成 + SKILL.mdテンプレート配置 + ローカルDL
+            - name: remote    # koi remote update / koi remote set-org
             - name: list      # インストール済みスキルの一覧
-            - name: remove    # スキルの削除
+            - name: uninstall # スキルの削除
 
-        # リポジトリ管理層（Git操作）
-        - name: repository
+        # GitHub API層（gh CLI経由）
+        - name: github
           file:
-            - name: git       # Git操作のラッパー (clone, pull, push)
-            - name: remote    # リモートリポジトリ情報の管理
-            - name: config    # リポジトリ設定の読み書き
+            - name: api       # gh apiコマンドのラッパー
+            - name: repo      # リポジトリ一覧取得・作成
+            - name: auth      # gh CLI認証チェック・案内
+
+        # Git操作層
+        - name: git
+          file:
+            - name: command   # git -C によるコマンド実行ラッパー
+            - name: clone     # git clone
+            - name: sync      # git stash / pull / push --no-verify
 
         # スキル管理層
         - name: skill
@@ -46,6 +54,7 @@
             - name: metadata  # スキルのメタデータ (SKILL.md解析)
             - name: path      # スキルのパス解決
             - name: validator # スキルの妥当性検証
+            - name: lockfile  # .koi.skills / ~/.koi/global.skills の読み書き
 
         # 対話的UI層（dioxus）
         - name: ui

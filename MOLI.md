@@ -2,86 +2,110 @@
 
 ## プロジェクト概要
 
-koiは、Claude Codeのスキルを自分用のリモートリポジトリと接続し、スキルをclone、pull、pushできるCLIツールです。
+koiは、Claude Codeのスキルをリモートリポジトリ（GitHub）と同期管理するCLIツールです。
 
 ### コンセプト
 
 - 自分用のClaude Codeスキルを育てるツール
 - Neovimプラグインを自分でカスタマイズするように、スキルも自分で成長させる
-- pull（取得・更新）もpush（公開）も**同一ユーザー**が行う双方向の管理
-
-### 他のパッケージマネージャーとの違い
-
-| ツール | 関係性 | コマンド |
-|--------|--------|----------|
-| npm/cargo | 作者（publish） ← 利用者（install/update） | 一方向 |
-| koi | 同一人物が pull/push を行う | 双方向 |
-
-この特徴から、gitのpull/pushとの統一感を重視したコマンド設計になっています。
+- install（取得）とupdate（同期）で直感的に管理
+- 内部的にはローカル⇔リモートの双方向同期を行う
 
 ## 技術スタック
 
 - **言語**: Rust
 - **CLI**: clap
 - **対話的UI**: dioxus（曖昧検索、プロンプト、進行状況表示）
-- **Git操作**: git2-rs または gitコマンドのラッパー
+- **外部依存**: gh CLI（GitHub CLI）+ git
+- **gh CLI**: 認証、GitHub API操作（リポジトリ一覧・作成、org設定）
+- **git**: ローカルリポジトリ操作（clone、pull、push、stash）。`-C`オプションでディレクトリ指定。
 
 ## コマンド一覧
 
-### koi clone
+### koi install (`koi i`)
 スキルをリモートリポジトリから取得します。
 
 ```bash
-koi clone              # 曖昧検索で選択してclone
-koi clone <skill-name> # 直接指定
-koi clone -g           # グローバル（~/.claude/skills）にインストール
+koi install              # 曖昧検索で選択してインストール（.koi.skillsに追記）
+koi install <skill-name> # 直接指定
+koi install -g           # グローバル（~/.claude/skills）にインストール
+koi install --restore    # .koi.skillsから一括復元（koi i -r）
 ```
 
-**動作**:
-1. リモートリポジトリのスキル一覧を取得
+**動作（通常）**:
+1. `gh api` でリモートリポジトリのスキル一覧を取得
 2. dioxusの曖昧検索UIで選択
-3. `.claude/skills/` または `~/.claude/skills/` にgit clone
+3. `git clone` で `.claude/skills/` にクローン
+4. `.koi.skills` にスキル情報を追記
 
-**要件**:
-- プライベートリポジトリに対応する必要がある
-- GitHub認証方法の候補：
-  - SSH鍵（`~/.ssh/id_rsa`）
-  - Personal Access Token (PAT)
-  - GitHub CLI (`gh auth`)の認証情報を利用
+**動作（--restore）**:
+1. `.koi.skills` を読み込み
+2. 記載された全スキルを `git clone` で `.claude/skills/` にクローン
 
-### koi pull
-スキルをリモートリポジトリから更新します。
+**認証**: gh CLI（`gh auth login`）に一任。プライベートリポジトリ対応済み。
+
+### koi update (`koi u`)
+リモートからローカルへスキルを同期します（pull）。
 
 ```bash
-koi pull <skill-name>  # 指定したスキルを更新
-koi pull --all         # すべてのスキルを更新
+koi update       # プロジェクトローカルの全スキルを同期
+koi update -g    # グローバルの全スキルを同期
 ```
 
 **動作**:
-1. スキルのディレクトリに移動
-2. `git pull` を実行
+1. 全インストール済みスキルに対して（`git -C` でディレクトリ指定）:
+   a. ローカルに未pushの変更がある場合 → `git stash` で退避
+   b. `git pull` でリモートから取得
+2. stashした場合はその旨を通知
 
-### koi push
-ローカルの変更をリモートリポジトリに反映します。
+**リモートが常に正。コンフリクトは発生しない。**
+
+**stash時の出力**:
+```
+Warning: スキル "moli" にローカル変更がありました → git stashで退避しました
+```
+
+### koi new
+リモートに新規スキルリポジトリを作成し、ローカルにダウンロードします。
 
 ```bash
-koi push <skill-name>  # 指定したスキルをpush
-koi push --all         # すべての変更をpush
+koi new <skill-name>    # 新規スキル作成
 ```
 
 **動作**:
-1. スキルのディレクトリに移動
-2. `git add .` でステージング
-3. `git commit` でコミット
-4. `git push` でリモートに反映
+1. `gh api` で設定済みorgに新規プライベートリポジトリを作成
+2. `gh api` でSKILL.mdテンプレートをリポジトリに配置
+3. `git clone` でローカル（`.claude/skills/<skill-name>/`）にクローン
+4. `.koi.skills` に追記
 
-**課題**:
-- **githooksの制約**: メインブランチへのコミット/pushが禁止されている環境への対応
-- 対応策の候補：
-  - **案A**: 別ブランチ運用（`koi-updates`ブランチにpush → PRを作成）
-  - **案B**: `--no-verify`フラグを使用（推奨されない）
-  - **案C**: koiディレクトリ（`.claude/skills/`）だけhooksを無効化
-  - **案D**: koi専用のgit設定で例外処理
+### koi remote update (`koi r u`)
+ローカルの変更をリモートに反映します（push）。
+
+```bash
+koi remote update       # プロジェクトローカルの変更をリモートに反映
+koi remote update -g    # グローバルの変更をリモートに反映
+```
+
+**動作**:
+1. 全インストール済みスキルに対して（`git -C` でディレクトリ指定）:
+   a. `git add .` + `git commit --no-verify -m "update skill"`
+   b. `git push --no-verify`
+   c. pushが失敗した場合（リモートが先行）→ エラーを出し `koi update` を先に実行するよう案内
+
+**push失敗時の出力**:
+```
+Error: スキル "moli" のリモートが別の環境で更新されています
+  先に koi update を実行してください
+```
+
+### koi remote set-org
+スキルの検索・作成対象となるGitHub orgを設定します。
+
+```bash
+koi remote set-org <org-name>   # 例: koi remote set-org itton-claude-skills
+```
+
+**動作**: `~/.koi/config.toml` の `[remote] org` を更新。
 
 ### koi list
 インストール済みのスキル一覧を表示します。
@@ -95,12 +119,13 @@ koi list -g            # グローバルのスキル一覧
 1. `.claude/skills/` または `~/.claude/skills/` のディレクトリを走査
 2. スキル名、バージョン、説明などを表示
 
-### koi remove
+### koi uninstall
 スキルをアンインストールします。
 
 ```bash
-koi remove             # 曖昧検索で選択してremove
-koi remove <skill-name> # 直接指定
+koi uninstall              # 曖昧検索で選択してアンインストール
+koi uninstall <skill-name> # 直接指定
+koi uninstall -g           # グローバルのスキルを削除
 ```
 
 **動作**:
@@ -108,6 +133,26 @@ koi remove <skill-name> # 直接指定
 2. dioxusの曖昧検索UIで選択
 3. 確認プロンプトを表示
 4. ディレクトリを削除
+5. `.koi.skills` から該当スキルを削除
+
+### スキル管理ファイル
+
+| ファイル | 用途 |
+|---------|------|
+| `.koi.skills` | プロジェクトローカルのスキル管理。リポジトリにコミットし `koi i -r` で一括復元可能。 |
+| `~/.koi/global.skills` | グローバルスキルのリモートマッピング。update -g / remote update -g 用。 |
+
+両ファイルは同じフォーマット：
+
+```toml
+[skills]
+moli = "itton-claude-skills/moli"
+expert-skill-make = "itton-claude-skills/expert-skill-make"
+expert-git-commit = "itton-claude-skills/expert-git-commit"
+```
+
+- `koi install` / `koi install -g` 時に自動追記
+- `koi uninstall` / `koi uninstall -g` 時に自動削除
 
 ## アーキテクチャ
 
@@ -121,19 +166,25 @@ koi/
     │   ├── args.rs       # コマンドライン引数の定義
     │   └── commands.rs   # サブコマンドの列挙と実行
     ├── commands/
-    │   ├── clone.rs      # スキルの取得
-    │   ├── pull.rs       # スキルの更新
-    │   ├── push.rs       # スキルの公開
+    │   ├── install.rs    # スキルの取得 / --restoreで一括復元
+    │   ├── update.rs     # リモートからローカルへ同期（pull）
+    │   ├── new.rs        # 新規スキル作成（リモートリポジトリ + SKILL.md + ローカルDL）
+    │   ├── remote.rs     # koi remote update / koi remote set-org
     │   ├── list.rs       # インストール済みスキルの一覧
-    │   └── remove.rs     # スキルの削除
-    ├── repository/
-    │   ├── git.rs        # Git操作のラッパー
-    │   ├── remote.rs     # リモートリポジトリ情報の管理
-    │   └── config.rs     # リポジトリ設定の読み書き
+    │   └── uninstall.rs  # スキルの削除
+    ├── github/
+    │   ├── api.rs        # gh apiコマンドのラッパー
+    │   ├── repo.rs       # リポジトリ一覧取得・作成
+    │   └── auth.rs       # gh CLI認証チェック
+    ├── git/
+    │   ├── command.rs    # git -C によるコマンド実行ラッパー
+    │   ├── clone.rs      # git clone
+    │   └── sync.rs       # git stash / pull / push --no-verify
     ├── skill/
     │   ├── metadata.rs   # スキルのメタデータ（SKILL.md解析）
     │   ├── path.rs       # スキルのパス解決
-    │   └── validator.rs  # スキルの妥当性検証
+    │   ├── validator.rs  # スキルの妥当性検証
+    │   └── lockfile.rs   # .koi.skills / ~/.koi/global.skills の読み書き
     ├── ui/
     │   ├── fuzzy.rs      # 曖昧検索のインタラクティブUI
     │   ├── prompt.rs     # 確認プロンプト
@@ -148,10 +199,11 @@ koi/
 
 1. **cli層**: clapによるCLIインターフェース定義
 2. **commands層**: 各サブコマンドの実装
-3. **repository層**: Git操作の抽象化
-4. **skill層**: スキル管理ロジック
-5. **ui層**: dioxusによる対話的UI
-6. **utils層**: 共通ユーティリティ
+3. **github層**: gh CLI（GitHub API操作）
+4. **git層**: gitコマンドのラッパー（clone、pull、push、stash）
+5. **skill層**: スキル管理ロジック
+6. **ui層**: dioxusによる対話的UI
+7. **utils層**: 共通ユーティリティ
 
 ## 設定ファイル
 
@@ -159,20 +211,8 @@ koi/
 
 ```toml
 [remote]
-# デフォルトのリモートリポジトリ
-default = "https://github.com/your-username/claude-skills"
-
-# 複数のリモートを管理可能
-[remote.repositories]
-personal = "https://github.com/your-username/claude-skills"
-work = "git@github.com:company/claude-skills.git"
-
-[auth]
-# GitHub認証方法 ("ssh" | "token" | "gh-cli")
-method = "ssh"
-
-# Personal Access Token（method = "token"の場合）
-# token = "ghp_xxxxxxxxxxxx"
+# スキルの検索・作成対象のGitHub org
+org = "itton-claude-skills"
 
 [paths]
 # デフォルトのインストールパス
@@ -180,45 +220,36 @@ local = ".claude/skills"
 global = "~/.claude/skills"
 ```
 
+**認証**: gh CLI（`gh auth login`）に一任するため、設定ファイルに認証情報は持たない。
+
 ## 開発方針
 
 ### 設計原則
 
-1. **gitとの統一感**: コマンド名や挙動をgitに合わせる
-2. **シンプルさ**: 必要最小限の機能に絞る
+1. **パッケージマネージャーの使用感**: install/update/list/uninstallの馴染みあるコマンド体系
+2. **シンプルさ**: 外部依存はgh CLI + gitのみ
 3. **対話性**: dioxusによる直感的なUI
-4. **柔軟性**: プライベートリポジトリやgithooksへの対応
+4. **プライベート前提**: gh authによる認証でプライベートリポジトリをサポート
 
 ### 実装の優先順位
 
-1. **Phase 1**: 基本コマンド（clone、list、remove）
-2. **Phase 2**: Git操作（pull、push）
-3. **Phase 3**: 認証機能（プライベートリポジトリ対応）
-4. **Phase 4**: githooks対応と高度な機能
+1. **Phase 1**: 基本コマンド（install、list、uninstall）+ gh CLI認証チェック + .koi.skills管理
+2. **Phase 2**: 同期コマンド（update、remote update）+ stash機能
+3. **Phase 3**: 対話的UI（dioxus曖昧検索）
+
+## 解決済みの課題
+
+### GitHub認証 → gh CLIに一任
+- `gh auth login` で認証済みであることを前提とする
+- 未認証の場合はインストール・認証を案内
+
+### githooksの制約 → 解消
+- `--no-verify` フラグでgithooksをスキップ
+- koiの内部処理でのみ使用するため、ユーザーの通常開発には影響しない
 
 ## 未解決の課題
 
-### 1. GitHub認証
-
-プライベートリポジトリをサポートするための認証方法を決定する必要がある。
-
-**候補**:
-- SSH鍵を使用（最もシンプル、git2-rsで対応可能）
-- GitHub CLIの認証情報を利用（`gh auth token`）
-- Personal Access Tokenを設定ファイルに保存
-
-### 2. githooksの制約
-
-メインブランチへのコミット/pushが禁止されている環境でどう動作させるか。
-
-**検討事項**:
-- ユーザーのワークフローに合わせた柔軟な設定が必要
-- デフォルトは安全側（hooks を尊重）に倒す
-- オプションで回避方法を提供
-
-### 3. グローバルインストール
-
-`-g`フラグで`~/.claude/skills`にインストールする機能の優先度と実装方法。
+（現時点で未解決の課題はなし）
 
 ## 参考資料
 

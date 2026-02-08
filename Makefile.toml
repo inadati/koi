@@ -1,0 +1,10 @@
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+# CARGO_MAKE_LOAD_SCRIPT = ".env"
+
+[tasks.dev]
+description = "Start development environment."
+workspace = false
+cwd = "."
+command = "cargo"
+args = ["watch", "-x", "run"]

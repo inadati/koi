@@ -9,9 +9,17 @@
         - from: https://github.com/itton-claude-skills/expert-skill-edit.git
         - from: https://github.com/itton-claude-skills/expert-git-commit.git
 
+
+
+- name: _test
+  lang: any
+  file:
+    - name: README.md
+
+
+
 # koiプロジェクト本体
-- name: koi
-  root: true
+- name: .
   lang: rust
   tree:
     - name: src
@@ -69,3 +77,4 @@
             - name: fs        # ファイルシステム操作
             - name: error     # エラー型の定義
             - name: config    # 設定ファイルの読み書き
+

@@ -23,9 +23,14 @@ pub fn run(name: Option<String>, global: bool, restore: bool) -> Result<()> {
         None => {
             progress::info("リモートリポジトリを取得中...");
             let repos = list_org_repo_names(&org)?;
+            let installed = load_lockfile(global)?;
+            let repos: Vec<String> = repos
+                .into_iter()
+                .filter(|r| !installed.skills.contains_key(r))
+                .collect();
             if repos.is_empty() {
                 return Err(KoiError::SkillNotFound(format!(
-                    "org '{}' にリポジトリがありません",
+                    "org '{}' にインストール可能なスキルがありません",
                     org
                 )));
             }

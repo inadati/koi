@@ -43,6 +43,7 @@ pub enum Commands {
         command: RemoteCommands,
     },
     /// インストール済みスキル一覧
+    #[command(alias = "ls")]
     List {
         /// グローバルのスキル一覧
         #[arg(short, long)]

@@ -30,11 +30,11 @@ pub fn run(name: Option<String>, global: bool, restore: bool) -> Result<()> {
                 .collect();
             if repos.is_empty() {
                 return Err(KoiError::SkillNotFound(format!(
-                    "org '{}' にインストール可能なスキルがありません",
+                    "org '{}' にクローン可能なスキルがありません",
                     org
                 )));
             }
-            select_from_list(&repos, "インストールするスキルを選択:")?
+            select_from_list(&repos, "クローンするスキルを選択:")?
         }
     };
 
@@ -46,13 +46,13 @@ pub fn run(name: Option<String>, global: bool, restore: bool) -> Result<()> {
     let dir = skills_dir(global)?;
     fs::create_dir_all(&dir)?;
 
-    progress::info(&format!("{} をインストール中...", repo_name));
+    progress::info(&format!("{} をクローン中...", repo_name));
     clone_skill(&org, &repo_name, &dest)?;
 
     let repo_ref = format!("{}/{}", org, repo_name);
     add_skill(global, &repo_name, &repo_ref)?;
 
-    progress::success(&format!("{} をインストールしました", repo_name));
+    progress::success(&format!("{} をクローンしました", repo_name));
     Ok(())
 }
 
@@ -69,12 +69,12 @@ fn run_restore(global: bool, org: &str) -> Result<()> {
     for (name, _repo_ref) in &skills_file.skills {
         let dest = skill_path(global, name)?;
         if dest.exists() {
-            progress::warn(&format!("{} は既にインストール済み、スキップ", name));
+            progress::warn(&format!("{} は既にクローン済み、スキップ", name));
             continue;
         }
-        progress::info(&format!("{} をインストール中...", name));
+        progress::info(&format!("{} をクローン中...", name));
         clone_skill(org, name, &dest)?;
-        progress::success(&format!("{} をインストールしました", name));
+        progress::success(&format!("{} をクローンしました", name));
     }
 
     progress::success("復元が完了しました");

@@ -35,12 +35,13 @@
         # コマンド実装層
         - name: commands
           file:
-            - name: install   # スキルの取得 / --restore で .koi.skills から一括復元
-            - name: update    # リモートからローカルへ同期（pull）
+            - name: clone     # スキルの取得 / --restore で .koi.skills から一括復元
+            - name: pull      # リモートからローカルへ同期
+            - name: push      # ローカル変更をリモートに反映
             - name: new       # リモートに新規スキルリポジトリ作成 + SKILL.mdテンプレート配置 + ローカルDL
-            - name: remote    # koi remote update / koi remote set-org
+            - name: remote    # GitHub remote管理（add/rm/list/switch）
             - name: list      # インストール済みスキルの一覧
-            - name: uninstall # スキルの削除
+            - name: remove    # スキルの削除
 
         # GitHub API層（gh CLI経由）
         - name: github

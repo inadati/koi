@@ -9,22 +9,26 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// スキルをインストール
-    #[command(alias = "i")]
-    Install {
+    /// スキルをクローン
+    Clone {
         /// スキル名（省略時は曖昧検索）
         name: Option<String>,
-        /// グローバルにインストール
+        /// グローバルにクローン
         #[arg(short, long)]
         global: bool,
         /// .koi.skillsから一括復元
         #[arg(short, long)]
         restore: bool,
     },
-    /// スキルを更新（リモートからpull）
-    #[command(alias = "u")]
-    Update {
-        /// グローバルのスキルを更新
+    /// スキルを同期（リモートからpull）
+    Pull {
+        /// グローバルのスキルを同期
+        #[arg(short, long)]
+        global: bool,
+    },
+    /// ローカル変更をリモートに反映（push）
+    Push {
+        /// グローバルのスキルをpush
         #[arg(short, long)]
         global: bool,
     },
@@ -34,20 +38,19 @@ pub enum Commands {
         name: String,
     },
     /// リモート操作
-    #[command(alias = "r")]
     Remote {
         #[command(subcommand)]
         command: RemoteCommands,
     },
     /// インストール済みスキル一覧
-    #[command(alias = "ls")]
     List {
         /// グローバルのスキル一覧
         #[arg(short, long)]
         global: bool,
     },
-    /// スキルをアンインストール
-    Uninstall {
+    /// スキルを削除
+    #[command(alias = "rm")]
+    Remove {
         /// スキル名（省略時は曖昧検索）
         name: Option<String>,
         /// グローバルのスキルを削除
@@ -58,16 +61,23 @@ pub enum Commands {
 
 #[derive(Subcommand)]
 pub enum RemoteCommands {
-    /// ローカル変更をリモートに反映（push）
-    #[command(alias = "u")]
-    Update {
-        /// グローバルのスキルをpush
-        #[arg(short, long)]
-        global: bool,
-    },
-    /// スキル検索対象のGitHub orgを設定
-    SetOrg {
+    /// GitHub remoteを追加
+    Add {
         /// org名
         org: String,
+    },
+    /// GitHub remoteを削除
+    #[command(alias = "rm")]
+    Remove {
+        /// org名（省略時は曖昧検索）
+        org: Option<String>,
+    },
+    /// remote一覧を表示
+    #[command(alias = "ls")]
+    List,
+    /// remoteを切り替え
+    Switch {
+        /// org名（省略時は曖昧検索）
+        org: Option<String>,
     },
 }

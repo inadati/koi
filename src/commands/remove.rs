@@ -18,10 +18,10 @@ pub fn run(name: Option<String>, global: bool) -> Result<()> {
                 .collect();
             if names.is_empty() {
                 return Err(KoiError::SkillNotFound(
-                    "アンインストール可能なスキルがありません".to_string(),
+                    "削除可能なスキルがありません".to_string(),
                 ));
             }
-            select_from_list(&names, "アンインストールするスキルを選択:")?
+            select_from_list(&names, "削除するスキルを選択:")?
         }
     };
 
@@ -30,7 +30,7 @@ pub fn run(name: Option<String>, global: bool) -> Result<()> {
         return Err(KoiError::SkillNotFound(skill_name));
     }
 
-    if !confirm(&format!("{} をアンインストールしますか？", skill_name))? {
+    if !confirm(&format!("{} を削除しますか？", skill_name))? {
         progress::info("キャンセルしました");
         return Ok(());
     }
@@ -38,6 +38,6 @@ pub fn run(name: Option<String>, global: bool) -> Result<()> {
     std::fs::remove_dir_all(&dest)?;
     remove_skill(global, &skill_name)?;
 
-    progress::success(&format!("{} をアンインストールしました", skill_name));
+    progress::success(&format!("{} を削除しました", skill_name));
     Ok(())
 }

@@ -1,9 +1,10 @@
 // start auto exported by moli.
-pub mod install;
-pub mod update;
+pub mod clone;
+pub mod pull;
+pub mod push;
 pub mod new;
 pub mod remote;
 pub mod list;
-pub mod uninstall;
+pub mod remove;
 // end auto exported by moli.
 

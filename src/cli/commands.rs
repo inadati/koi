@@ -1,21 +1,24 @@
 use crate::cli::args::{Cli, Commands, RemoteCommands};
-use crate::commands::{install, list, new, remote, uninstall, update};
+use crate::commands::{clone, list, new, pull, push, remote, remove};
 use crate::utils::error::Result;
 
 pub fn run(cli: Cli) -> Result<()> {
     match cli.command {
-        Commands::Install {
+        Commands::Clone {
             name,
             global,
             restore,
-        } => install::run(name, global, restore),
-        Commands::Update { global } => update::run(global),
+        } => clone::run(name, global, restore),
+        Commands::Pull { global } => pull::run(global),
+        Commands::Push { global } => push::run(global),
         Commands::New { name } => new::run(&name),
         Commands::Remote { command } => match command {
-            RemoteCommands::Update { global } => remote::run_update(global),
-            RemoteCommands::SetOrg { org } => remote::run_set_org(&org),
+            RemoteCommands::Add { org } => remote::run_add(&org),
+            RemoteCommands::Remove { org } => remote::run_remove(org),
+            RemoteCommands::List => remote::run_list(),
+            RemoteCommands::Switch { org } => remote::run_switch(org),
         },
         Commands::List { global } => list::run(global),
-        Commands::Uninstall { name, global } => uninstall::run(name, global),
+        Commands::Remove { name, global } => remove::run(name, global),
     }
 }

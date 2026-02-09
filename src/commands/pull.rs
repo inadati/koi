@@ -13,7 +13,7 @@ pub fn run(global: bool) -> Result<()> {
     let names = list_subdirs(&dir)?;
 
     if names.is_empty() {
-        progress::info("更新対象のスキルがありません");
+        progress::info("同期対象のスキルがありません");
         return Ok(());
     }
 
@@ -31,9 +31,9 @@ pub fn run(global: bool) -> Result<()> {
             ));
         }
 
-        progress::info(&format!("{} を更新中...", name));
+        progress::info(&format!("{} を同期中...", name));
         pull(&skill_dir)?;
-        progress::success(&format!("{} を更新しました", name));
+        progress::success(&format!("{} を同期しました", name));
     }
 
     Ok(())

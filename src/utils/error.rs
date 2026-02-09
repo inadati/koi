@@ -1,4 +1,3 @@
-use std::path::PathBuf;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -33,11 +32,8 @@ pub enum KoiError {
     #[error("Skill already installed: {0}")]
     SkillAlreadyInstalled(String),
 
-    #[error("Config not found: org is not set. Please run: koi remote set-org <org>")]
+    #[error("Config not found: org is not set. Please run: koi remote add <org>")]
     OrgNotSet,
-
-    #[error("Directory not found: {0}")]
-    DirNotFound(PathBuf),
 
     #[error("User cancelled")]
     Cancelled,

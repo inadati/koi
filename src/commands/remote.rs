@@ -1,65 +1,65 @@
-use crate::git::sync::{add_and_commit, has_local_changes, push};
-use crate::github::auth::ensure_gh_ready;
-use crate::skill::path::skills_dir;
-use crate::skill::validator::is_valid_skill;
+use crate::ui::fuzzy::select_from_list;
 use crate::ui::progress;
 use crate::utils::config::{load_config, save_config};
-use crate::utils::error::Result;
-use crate::utils::fs::list_subdirs;
+use crate::utils::error::{KoiError, Result};
 
-pub fn run_set_org(org: &str) -> Result<()> {
+pub fn run_add(org: &str) -> Result<()> {
     let mut config = load_config()?;
     config.remote.org = Some(org.to_string());
     save_config(&config)?;
-    progress::success(&format!("org を '{}' に設定しました", org));
+    progress::success(&format!("remote '{}' を追加しました", org));
     Ok(())
 }
 
-pub fn run_update(global: bool) -> Result<()> {
-    ensure_gh_ready()?;
-
-    let dir = skills_dir(global)?;
-    let names = list_subdirs(&dir)?;
-
-    if names.is_empty() {
-        progress::info("push対象のスキルがありません");
-        return Ok(());
-    }
-
-    let mut had_errors = false;
-
-    for name in &names {
-        let skill_dir = dir.join(name);
-        if !is_valid_skill(&skill_dir) {
-            continue;
-        }
-
-        // 変更があればadd + commit
-        if has_local_changes(&skill_dir)? {
-            progress::info(&format!("{} の変更をコミット中...", name));
-            add_and_commit(&skill_dir)?;
-        }
-
-        // push
-        progress::info(&format!("{} をpush中...", name));
-        match push(&skill_dir) {
-            Ok(()) => {
-                progress::success(&format!("{} をpushしました", name));
+pub fn run_remove(org: Option<String>) -> Result<()> {
+    let org_name = match org {
+        Some(n) => n,
+        None => {
+            // TODO: ~/.koi/remotes.tomlから登録済みremote一覧を取得
+            let remotes = vec!["example-org".to_string()]; // スタブ
+            if remotes.is_empty() {
+                return Err(KoiError::SkillNotFound(
+                    "削除可能なremoteがありません".to_string(),
+                ));
             }
-            Err(_) => {
-                eprintln!(
-                    "Error: スキル \"{}\" のリモートが別の環境で更新されています",
-                    name
-                );
-                eprintln!("  先に koi update を実行してください");
-                had_errors = true;
-            }
+            select_from_list(&remotes, "削除するremoteを選択:")?
         }
-    }
+    };
 
-    if had_errors {
-        std::process::exit(1);
-    }
+    // TODO: ~/.koi/remotes.tomlから削除する実装
+    progress::success(&format!("remote '{}' を削除しました", org_name));
+    Ok(())
+}
 
+pub fn run_list() -> Result<()> {
+    // TODO: ~/.koi/remotes.tomlから一覧を取得する実装
+    let config = load_config()?;
+    if let Some(org) = config.remote.org {
+        println!("* {}", org);
+    } else {
+        progress::info("登録されているremoteがありません");
+    }
+    Ok(())
+}
+
+pub fn run_switch(org: Option<String>) -> Result<()> {
+    let org_name = match org {
+        Some(n) => n,
+        None => {
+            // TODO: ~/.koi/remotes.tomlから登録済みremote一覧を取得
+            let remotes = vec!["example-org".to_string()]; // スタブ
+            if remotes.is_empty() {
+                return Err(KoiError::SkillNotFound(
+                    "切り替え可能なremoteがありません".to_string(),
+                ));
+            }
+            select_from_list(&remotes, "切り替え先のremoteを選択:")?
+        }
+    };
+
+    let mut config = load_config()?;
+    config.remote.org = Some(org_name.clone());
+    save_config(&config)?;
+    progress::success(&format!("remote を '{}' に切り替えました", org_name));
     Ok(())
 }

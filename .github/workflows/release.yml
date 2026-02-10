@@ -5,6 +5,9 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
       - "v[0-9]+.[0-9]+.[0-9]+-*"
       - "v[0-9]+.[0-9]+"
+permissions:
+  contents: write
+
 jobs:
   binary:
     name: Publish ${{ matrix.target }}

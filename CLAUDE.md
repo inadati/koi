@@ -430,6 +430,16 @@ koi completion powershell > koi.ps1
 - 技術スタックの明確化: dioxus → ratatui + crossterm + fuzzy-matcher
 - 設定ファイル名の変更: `~/.koi/orgs.toml` → `~/.koi/remotes.toml`
 
+### 2026-02-10: シェル補完機能の追加 (v0.1.1)
+
+- **シェル補完機能の実装**
+- `clap_complete`クレートを使用
+- `koi completion <shell>`コマンドを追加
+  - 対応シェル: bash, zsh, fish, powershell, elvish
+- moliの実装を参考に、CLIの全コマンド構造を再現
+- CLAUDE.mdにインストール方法を追記
+- バージョンを0.1.0から0.1.1に更新
+
 ## 参考資料
 
 - [cargo](https://github.com/rust-lang/cargo)

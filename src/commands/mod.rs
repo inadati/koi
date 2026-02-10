@@ -6,5 +6,6 @@ pub mod new;
 pub mod remote;
 pub mod list;
 pub mod remove;
+pub mod completion;
 // end auto exported by moli.
 

@@ -1,5 +1,5 @@
 use crate::cli::args::{Cli, Commands, RemoteCommands};
-use crate::commands::{clone, list, new, pull, push, remote, remove};
+use crate::commands::{clone, completion, list, new, pull, push, remote, remove};
 use crate::utils::error::Result;
 
 pub fn run(cli: Cli) -> Result<()> {
@@ -20,5 +20,9 @@ pub fn run(cli: Cli) -> Result<()> {
         },
         Commands::List { global } => list::run(global),
         Commands::Remove { name, global } => remove::run(name, global),
+        Commands::Completion { shell } => {
+            completion::run(shell);
+            Ok(())
+        }
     }
 }

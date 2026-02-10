@@ -302,6 +302,7 @@ koi remove -g           # グローバルのスキルを削除
 | `koi remote remove` | `koi remote rm` | GitHub remoteを削除 | 曖昧検索で選択 |
 | `koi remote list` | `koi remote ls` | remote一覧を表示 | - |
 | `koi remote switch` | | remoteを切り替え | 曖昧検索で選択 |
+| `koi completion <shell>` | | シェル補完スクリプトを生成（bash/zsh/fish/powershell/elvish） | - |
 
 ### スキル管理ファイル
 
@@ -326,6 +327,28 @@ active = "itton-claude-skills"
 itton-claude-skills = { description = "個人スキルリポジトリ" }
 work-org = { description = "業務用スキルリポジトリ" }
 ```
+
+### シェル補完のインストール
+
+`koi completion`コマンドでシェル補完スクリプトを生成できます。
+
+```bash
+# Bash
+koi completion bash > /usr/local/etc/bash_completion.d/koi
+
+# Zsh
+koi completion zsh > ~/.zsh/completion/_koi
+# または
+koi completion zsh > /usr/local/share/zsh/site-functions/_koi
+
+# Fish
+koi completion fish > ~/.config/fish/completions/koi.fish
+
+# PowerShell
+koi completion powershell > koi.ps1
+```
+
+インストール後、シェルを再起動するか、補完ファイルをリロードしてください。
 
 ### なぜ search, init がないのか
 

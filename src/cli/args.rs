@@ -58,6 +58,11 @@ pub enum Commands {
         #[arg(short, long)]
         global: bool,
     },
+    /// シェル補完スクリプトを生成
+    Completion {
+        /// シェルの種類
+        shell: crate::commands::completion::CompletionShell,
+    },
 }
 
 #[derive(Subcommand)]

@@ -69,7 +69,7 @@ fi
 # エイリアスチェック
 alias_name="koi_install"
 if ! grep -q "$alias_name" "$SHELL_RC" 2>/dev/null; then
-    MESSAGES="${MESSAGES}echo 'alias ${alias_name}=\"gh release download --repo ${REPO} --pattern koi-*.tar.gz -D /tmp && tar -xzf /tmp/koi-*.tar.gz -C \\\$HOME/.bin && rm /tmp/koi-*.tar.gz && exec \\\$SHELL -l\"' >> $SHELL_RC\n"
+    MESSAGES="${MESSAGES}echo 'alias ${alias_name}=\"gh release download --repo ${REPO} -p '\"'\"'koi-*-${TARGET}.tar.gz'\"'\"' --output - | tar -xzf - -C \\\$HOME/.bin && exec \\\$SHELL -l\"' >> $SHELL_RC\n"
 fi
 
 # メッセージがある場合のみ表示

@@ -39,22 +39,25 @@ fn build_cli() -> Command {
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(
-            Command::new("clone")
-                .about("スキルをクローン")
-                .alias("c")
+            Command::new("add")
+                .about("スキルを追加")
                 .arg(Arg::new("name").help("スキル名"))
                 .arg(
                     Arg::new("global")
                         .short('g')
                         .long("global")
-                        .help("グローバルにインストール")
+                        .help("グローバルに追加")
                         .action(clap::ArgAction::SetTrue),
-                )
+                ),
+        )
+        .subcommand(
+            Command::new("restore")
+                .about(".koi.skillsから一括復元")
                 .arg(
-                    Arg::new("restore")
-                        .short('r')
-                        .long("restore")
-                        .help(".koi.skillsから一括復元")
+                    Arg::new("global")
+                        .short('g')
+                        .long("global")
+                        .help("グローバルのスキルを復元")
                         .action(clap::ArgAction::SetTrue),
                 ),
         )

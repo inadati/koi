@@ -9,16 +9,19 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// スキルをクローン
-    Clone {
+    /// スキルを追加
+    Add {
         /// スキル名（省略時は曖昧検索）
         name: Option<String>,
-        /// グローバルにクローン
+        /// グローバルに追加
         #[arg(short, long)]
         global: bool,
-        /// .koi.skillsから一括復元
+    },
+    /// .koi.skillsから一括復元
+    Restore {
+        /// グローバルのスキルを復元
         #[arg(short, long)]
-        restore: bool,
+        global: bool,
     },
     /// リモートとローカルを同期
     Sync {

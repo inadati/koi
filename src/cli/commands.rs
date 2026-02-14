@@ -1,14 +1,11 @@
 use crate::cli::args::{Cli, Commands, RemoteCommands};
-use crate::commands::{clone, completion, list, new, remote, remove, sync};
+use crate::commands::{add, completion, list, new, remote, remove, restore, sync};
 use crate::utils::error::Result;
 
 pub fn run(cli: Cli) -> Result<()> {
     match cli.command {
-        Commands::Clone {
-            name,
-            global,
-            restore,
-        } => clone::run(name, global, restore),
+        Commands::Add { name, global } => add::run(name, global),
+        Commands::Restore { global } => restore::run(global),
         Commands::Sync { global } => sync::run(global),
         Commands::New { name } => new::run(&name),
         Commands::Remote { command } => match command {

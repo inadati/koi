@@ -59,24 +59,13 @@ fn build_cli() -> Command {
                 ),
         )
         .subcommand(
-            Command::new("pull")
-                .about("リモートからローカルへ同期")
+            Command::new("sync")
+                .about("リモートとローカルを同期")
                 .arg(
                     Arg::new("global")
                         .short('g')
                         .long("global")
                         .help("グローバルスキルを同期")
-                        .action(clap::ArgAction::SetTrue),
-                ),
-        )
-        .subcommand(
-            Command::new("push")
-                .about("ローカル変更をリモートに反映")
-                .arg(
-                    Arg::new("global")
-                        .short('g')
-                        .long("global")
-                        .help("グローバルの変更を反映")
                         .action(clap::ArgAction::SetTrue),
                 ),
         )

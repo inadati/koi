@@ -56,14 +56,13 @@ koiのコマンド設計は、以下の特徴に基づいています：
 
 **他のパッケージマネージャーとの違い**:
 - npm/cargo: 作者（publish） ← 利用者（install/update）の**一方向**
-- koi: 同一人物がpull/pushを行う**双方向**の管理
+- koi: 同一人物がsyncを行う**双方向**の管理
 
 この特徴から、**gitとの統一感**を最優先したコマンド設計になっています：
 
 ```bash
 koi clone     # スキルを取得（git clone）
-koi pull      # 全スキルを同期（git stash + git pull）
-koi push      # 全スキルを反映（git add + commit + push）
+koi sync      # リモートとローカルを同期（pull + push統合）
 koi remote    # リモートリポジトリ管理（git remote相当）
 ```
 
@@ -75,7 +74,7 @@ koi remote    # リモートリポジトリ管理（git remote相当）
 
 ### 設計原則
 
-1. **gitとの統一感**: clone/pull/push/remoteのgitライクなコマンド体系
+1. **gitとの統一感**: clone/sync/remoteのgitライクなコマンド体系
 2. **シンプルさ**: 外部依存はgh CLI + gitのみ
 3. **対話性**: ratauiによる曖昧検索UI
 4. **プライベート前提**: gh authによる認証でプライベートリポジトリをサポート
@@ -83,7 +82,7 @@ koi remote    # リモートリポジトリ管理（git remote相当）
 ### 実装の優先順位
 
 1. **Phase 1**: 基本コマンド（clone、list、remove）+ gh CLI認証チェック + .koi.skills管理
-2. **Phase 2**: 同期コマンド（pull、push）+ stash機能
+2. **Phase 2**: 同期コマンド（sync）+ stash機能
 3. **Phase 3**: remote管理の強化（複数remote対応）
 
 ## アーキテクチャ
@@ -99,8 +98,7 @@ koi/
     │   └── commands.rs   # サブコマンドの列挙と実行
     ├── commands/
     │   ├── clone.rs      # スキルの取得 / --restoreで一括復元
-    │   ├── pull.rs       # リモートからローカルへ同期
-    │   ├── push.rs       # ローカル変更をリモートに反映
+    │   ├── sync.rs       # リモートとローカルを同期（pull + push統合）
     │   ├── new.rs        # 新規スキル作成（リモートリポジトリ + SKILL.md + ローカルDL）
     │   ├── remote.rs     # GitHub remote管理（add/rm/list/switch）
     │   ├── list.rs       # インストール済みスキルの一覧
@@ -176,47 +174,29 @@ koi clone --restore    # .koi.skillsから一括復元（koi clone -r）
 
 **認証**: gh CLI（`gh auth login`）に一任。プライベートリポジトリ対応済み。
 
-### koi pull
+### koi sync
 
-リモートからローカルへスキルを同期します。
+リモートとローカルを同期します（pull + push統合）。
 
 ```bash
-koi pull       # プロジェクトローカルの全スキルを同期
-koi pull -g    # グローバルの全スキルを同期
+koi sync       # プロジェクトローカルの全スキルを同期
+koi sync -g    # グローバルの全スキルを同期
 ```
 
 **動作**:
 1. 全インストール済みスキルに対して（`git -C` でディレクトリ指定）:
-   a. ローカルに未pushの変更がある場合 → `git stash` で退避
-   b. `git pull` でリモートから取得
-2. stashした場合はその旨を通知
+   a. **ローカル変更がない場合**: `git pull` のみ実行
+   b. **ローカル変更がある場合**:
+      1. `git stash` でローカル変更を退避
+      2. `git pull` でリモートの最新を取得
+      3. `git stash pop` でローカル変更を再適用
+      4. コンフリクトが発生した場合 → 警告を表示して次のスキルへ
+      5. `git add -A` + `git commit --no-verify` + `git push --no-verify`
 
-**リモートが常に正。コンフリクトは発生しない。**
-
-**stash時の出力**:
+**コンフリクト時の出力**:
 ```
-Warning: スキル "moli" にローカル変更がありました → git stashで退避しました
-```
-
-### koi push
-
-ローカルの変更をリモートに反映します。
-
-```bash
-koi push       # プロジェクトローカルの変更をリモートに反映
-koi push -g    # グローバルの変更をリモートに反映
-```
-
-**動作**:
-1. 全インストール済みスキルに対して（`git -C` でディレクトリ指定）:
-   a. `git add .` + `git commit --no-verify -m "update skill"`
-   b. `git push --no-verify`
-   c. pushが失敗した場合（リモートが先行）→ エラーを出し `koi pull` を先に実行するよう案内
-
-**push失敗時の出力**:
-```
-Error: スキル "moli" のリモートが別の環境で更新されています
-  先に koi pull を実行してください
+Warning: スキル "moli" でコンフリクトが発生しました
+  手動で解決してください: .claude/skills/moli/
 ```
 
 ### koi new
@@ -289,10 +269,8 @@ koi remove -g           # グローバルのスキルを削除
 | `koi clone` | | スキルを取得 | 曖昧検索で選択 |
 | `koi clone --restore` | `koi clone -r` | .koi.skillsから一括復元 | - |
 | `koi clone -g` | | グローバルにクローン | 曖昧検索で選択 |
-| `koi pull` | | リモートからローカルへ同期 | - |
-| `koi pull -g` | | グローバルスキルを同期 | - |
-| `koi push` | | ローカル変更をリモートに反映 | - |
-| `koi push -g` | | グローバルの変更をリモートに反映 | - |
+| `koi sync` | | リモートとローカルを同期 | - |
+| `koi sync -g` | | グローバルスキルを同期 | - |
 | `koi new <skill-name>` | | 新規スキル作成（リモートリポジトリ + SKILL.md + ローカルDL） | - |
 | `koi list` | | インストール済みスキル一覧 | - |
 | `koi list -g` | | グローバルのスキル一覧 | - |
@@ -309,7 +287,7 @@ koi remove -g           # グローバルのスキルを削除
 | ファイル | 用途 |
 |---------|------|
 | `.koi.skills` | プロジェクトローカルのスキル管理。リポジトリにコミットする。`koi clone -r` で一括復元可能。 |
-| `~/.koi/global.skills` | グローバルスキルのリモートマッピング。pull/push用。 |
+| `~/.koi/global.skills` | グローバルスキルのリモートマッピング。sync用。 |
 | `~/.koi/remotes.toml` | 登録済みGitHub remoteの管理。アクティブなremoteも記録。 |
 
 ```toml
@@ -366,7 +344,7 @@ koi completion powershell > koi.ps1
 ### 2026-02-06: プロジェクト初期設計
 
 - moli.ymlの設計と作成
-- コマンド構成の検討（clone/pull/push/list/remove）
+- コマンド構成の検討（clone/sync/list/remove）
 - MOLI.mdに詳細仕様を記録
 - アーキテクチャの設計（6層構成）
 
@@ -401,8 +379,7 @@ koi completion powershell > koi.ps1
 - main.rs
 
 **スタブ（Phase 2で実装予定）**:
-- commands/pull.rs - `koi pull`（git stash + git pull）
-- commands/push.rs - `koi push`（git add + commit + push）
+- commands/sync.rs - `koi sync`（pull + push統合）
 - commands/new.rs - `koi new`（リモートリポジトリ作成 + clone）
 
 **Phase 3（実装済み）**:
@@ -419,8 +396,7 @@ koi completion powershell > koi.ps1
 - **コマンド変更**:
   - `koi install` → `koi clone`（スキルの取得）
   - `koi uninstall` → `koi remove` (短縮: `rm`)（スキルの削除）
-  - `koi update` → `koi pull`（リモートからローカルへ同期）
-  - `koi org update` → `koi push`（ローカル変更をリモートに反映）
+  - `koi update` / `koi org update` → `koi sync`（リモートとローカルを同期）
   - `koi org` → `koi remote`（remote管理）
 - **remote管理の強化**:
   - 複数remote対応（add/remove/list/switch）

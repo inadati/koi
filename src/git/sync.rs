@@ -13,6 +13,11 @@ pub fn stash(dir: &Path) -> Result<()> {
     Ok(())
 }
 
+pub fn stash_pop(dir: &Path) -> Result<()> {
+    git_in_dir(dir, &["stash", "pop"])?;
+    Ok(())
+}
+
 pub fn pull(dir: &Path) -> Result<()> {
     git_in_dir(dir, &["pull"])?;
     Ok(())

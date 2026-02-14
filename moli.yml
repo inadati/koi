@@ -1,16 +1,4 @@
 # .claudeディレクトリの管理（スキル）
-- name: .claude
-  lang: any
-  tree:
-    - name: skills
-      tree:
-        - from: https://github.com/itton-claude-skills/moli.git
-        - from: https://github.com/itton-claude-skills/expert-skill-make.git
-        - from: https://github.com/itton-claude-skills/expert-skill-edit.git
-        - from: https://github.com/itton-claude-skills/expert-git-commit.git
-
-
-
 - name: _test
   lang: any
   file:
@@ -36,8 +24,7 @@
         - name: commands
           file:
             - name: clone      # スキルの取得 / --restore で .koi.skills から一括復元
-            - name: pull       # リモートからローカルへ同期
-            - name: push       # ローカル変更をリモートに反映
+            - name: sync       # リモートとローカルを同期（pull + push統合）
             - name: new        # リモートに新規スキルリポジトリ作成 + SKILL.mdテンプレート配置 + ローカルDL
             - name: remote     # GitHub remote管理（add/rm/list/switch）
             - name: list       # インストール済みスキルの一覧

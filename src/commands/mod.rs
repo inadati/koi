@@ -1,7 +1,6 @@
 // start auto exported by moli.
 pub mod clone;
-pub mod pull;
-pub mod push;
+pub mod sync;
 pub mod new;
 pub mod remote;
 pub mod list;

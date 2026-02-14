@@ -20,15 +20,9 @@ pub enum Commands {
         #[arg(short, long)]
         restore: bool,
     },
-    /// スキルを同期（リモートからpull）
-    Pull {
+    /// リモートとローカルを同期
+    Sync {
         /// グローバルのスキルを同期
-        #[arg(short, long)]
-        global: bool,
-    },
-    /// ローカル変更をリモートに反映（push）
-    Push {
-        /// グローバルのスキルをpush
         #[arg(short, long)]
         global: bool,
     },

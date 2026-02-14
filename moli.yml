@@ -23,7 +23,8 @@
         # コマンド実装層
         - name: commands
           file:
-            - name: clone      # スキルの取得 / --restore で .koi.skills から一括復元
+            - name: add        # スキルの追加（npm add相当）
+            - name: restore    # .koi.skillsから一括復元
             - name: sync       # リモートとローカルを同期（pull + push統合）
             - name: new        # リモートに新規スキルリポジトリ作成 + SKILL.mdテンプレート配置 + ローカルDL
             - name: remote     # GitHub remote管理（add/rm/list/switch）

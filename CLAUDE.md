@@ -61,7 +61,8 @@ koiのコマンド設計は、以下の特徴に基づいています：
 この特徴から、**gitとの統一感**を最優先したコマンド設計になっています：
 
 ```bash
-koi clone     # スキルを取得（git clone）
+koi add       # スキルを取得（全リモートを横断検索）
+koi restore   # .koi.skillsから一括復元
 koi sync      # リモートとローカルを同期（pull + push統合）
 koi remote    # リモートリポジトリ管理（git remote相当）
 ```
@@ -74,7 +75,7 @@ koi remote    # リモートリポジトリ管理（git remote相当）
 
 ### 設計原則
 
-1. **gitとの統一感**: clone/sync/remoteのgitライクなコマンド体系
+1. **gitとの統一感**: add/restore/sync/remoteのgitライクなコマンド体系
 2. **シンプルさ**: 外部依存はgh CLI + gitのみ
 3. **対話性**: ratauiによる曖昧検索UI
 4. **プライベート前提**: gh authによる認証でプライベートリポジトリをサポート
@@ -97,10 +98,11 @@ koi/
     │   ├── args.rs       # コマンドライン引数の定義
     │   └── commands.rs   # サブコマンドの列挙と実行
     ├── commands/
-    │   ├── clone.rs      # スキルの取得 / --restoreで一括復元
+    │   ├── add.rs        # スキルの追加（全リモート横断検索）
+    │   ├── restore.rs    # .koi.skillsから一括復元
     │   ├── sync.rs       # リモートとローカルを同期（pull + push統合）
     │   ├── new.rs        # 新規スキル作成（リモートリポジトリ + SKILL.md + ローカルDL）
-    │   ├── remote.rs     # GitHub remote管理（add/rm/list/switch）
+    │   ├── remote.rs     # GitHub remote管理（add/rm/list/set-url）
     │   ├── list.rs       # インストール済みスキルの一覧
     │   └── remove.rs     # スキルの削除
     ├── github/
@@ -151,26 +153,38 @@ global = "~/.claude/skills"
 
 ## コマンド詳細
 
-### koi clone
+### koi add
 
-スキルをリモートリポジトリから取得します。
+登録済みの全リモートを横断してスキルを追加します。
 
 ```bash
-koi clone              # 曖昧検索で選択してクローン（.koi.skillsに追記）
-koi clone <skill-name> # 直接指定
-koi clone -g           # グローバル（~/.claude/skills）にクローン
-koi clone --restore    # .koi.skillsから一括復元（koi clone -r）
+koi add              # 全リモートから曖昧検索で選択して追加（複数選択可）
+koi add <skill-name> # 直接指定（全リモートを横断して検索、AI用）
+koi add -g           # グローバル（~/.claude/skills）に追加
 ```
 
-**動作（通常）**:
-1. `gh api` でリモートリポジトリのスキル一覧を取得
-2. ratauiの曖昧検索UIで選択
-3. `git clone` で `.claude/skills/` にクローン
-4. `.koi.skills` にスキル情報を追記
+**動作**:
+1. 登録済み全リモートから `gh api` でリポジトリ一覧を収集
+2. インストール済み（ローカル・グローバル両方）を除外
+3. ratauiの曖昧検索UIで選択（表示形式: `skill-name @alias`）
+4. `git clone` で `.claude/skills/` にクローン
+5. `.koi.skills` にエイリアス名を記録
 
-**動作（--restore）**:
-1. `.koi.skills` を読み込み
-2. 記載された全スキルを `git clone` で `.claude/skills/` にクローン
+**認証**: gh CLI（`gh auth login`）に一任。プライベートリポジトリ対応済み。
+
+### koi restore
+
+`.koi.skills` からスキルを一括復元します。
+
+```bash
+koi restore      # ローカルの.koi.skillsから一括復元
+koi restore -g   # グローバルから一括復元
+```
+
+**動作**:
+1. `.koi.skills` を読み込み（スキル名 → エイリアス名のマッピング）
+2. エイリアス名から org 名を解決（`remotes.toml` を参照）
+3. 記載された全スキルを `git clone` で `.claude/skills/` にクローン
 
 **認証**: gh CLI（`gh auth login`）に一任。プライベートリポジトリ対応済み。
 
@@ -204,33 +218,35 @@ Warning: スキル "moli" でコンフリクトが発生しました
 リモートに新規スキルリポジトリを作成し、ローカルにダウンロードします。
 
 ```bash
-koi new <skill-name>    # 新規スキル作成
+koi new <skill-name>             # 新規スキル作成（リモートをfuzzy UIで選択）
+koi new <skill-name> -r <alias>  # リモートを直接指定して作成
 ```
 
 **動作**:
-1. `gh api` で設定済みorgに新規プライベートリポジトリを作成
-2. `gh api` でSKILL.mdテンプレートをリポジトリに配置
-3. `git clone` でローカル（`.claude/skills/<skill-name>/`）にクローン
-4. `.koi.skills` に追記
+1. リモートエイリアスを決定（`--remote` 未指定時: 1つなら自動選択、複数ならfuzzy UI）
+2. `gh api` でorgに新規プライベートリポジトリを作成
+3. `gh api` でSKILL.mdテンプレートをリポジトリに配置
+4. `git clone` でローカル（`.claude/skills/<skill-name>/`）にクローン
+5. `.koi.skills` にエイリアス名を記録
 
 ### koi remote
 
 GitHub remote（organization）を管理します。
 
 ```bash
-koi remote add <org>         # GitHub remoteを追加
-koi remote remove            # 曖昧検索で選択して削除（koi remote rm）
-koi remote remove <org>      # 直接指定して削除
-koi remote list              # remote一覧を表示（koi remote ls）
-koi remote switch            # 曖昧検索で選択して切り替え
-koi remote switch <org>      # 直接指定して切り替え
+koi remote add <org>                # GitHub remoteを追加（エイリアス名をプロンプトで入力）
+koi remote add <org> --name <alias> # エイリアス名を直接指定して追加
+koi remote remove                   # 曖昧検索で選択して削除（koi remote rm）
+koi remote remove <alias>           # 直接指定して削除
+koi remote list                     # remote一覧を表示（koi remote ls）
+koi remote set-url <alias> <org>    # エイリアスのorg名を更新（GitHub org改名時に使用）
 ```
 
 **動作**:
-- `~/.koi/remotes.toml` でremote（org）情報を管理
-- 複数remoteの登録・切り替えが可能
-- gitの`git remote`コマンドと同様の操作感
-- `remove`と`switch`はratauiの曖昧検索UIで選択可能（`koi clone`と同様）
+- `~/.koi/remotes.toml` でremote（alias → org）情報を管理
+- エイリアス名: 英数字・ハイフン・アンダースコアのみ（デフォルトはorg名）
+- `koi remote remove` で参照中エイリアスがある場合は警告を表示（削除は続行）
+- `koi remote set-url` は `remotes.toml` のorg値のみ更新（`.koi.skills` の変更は不要）
 
 ### koi list
 
@@ -266,44 +282,48 @@ koi remove -g           # グローバルのスキルを削除
 
 | コマンド | 短縮 | 説明 | 対話的UI |
 |---------|------|------|----------|
-| `koi clone` | | スキルを取得 | 曖昧検索で選択 |
-| `koi clone --restore` | `koi clone -r` | .koi.skillsから一括復元 | - |
-| `koi clone -g` | | グローバルにクローン | 曖昧検索で選択 |
+| `koi add` | | 全リモートを横断してスキルを追加（複数選択可） | 曖昧検索で選択 |
+| `koi add -g` | | グローバルに追加 | 曖昧検索で選択 |
+| `koi restore` | | .koi.skillsから一括復元 | - |
+| `koi restore -g` | | グローバルのスキルを復元 | - |
 | `koi sync` | | リモートとローカルを同期 | - |
 | `koi sync -g` | | グローバルスキルを同期 | - |
-| `koi new <skill-name>` | | 新規スキル作成（リモートリポジトリ + SKILL.md + ローカルDL） | - |
+| `koi new <skill-name>` | | 新規スキル作成（リモートリポジトリ + SKILL.md + ローカルDL） | リモート選択 |
+| `koi new <skill-name> -r <alias>` | | リモートを直接指定して新規スキル作成 | - |
 | `koi list` | | インストール済みスキル一覧 | - |
-| `koi list -g` | | グローバルのスキル一覧 | - |
+| `koi list -g` | `koi ls -g` | グローバルのスキル一覧 | - |
 | `koi remove` | `koi rm` | スキルを削除 | 曖昧検索で選択 |
 | `koi remove -g` | `koi rm -g` | グローバルのスキルを削除 | 曖昧検索で選択 |
-| `koi remote add <org>` | | GitHub remoteを追加 | - |
+| `koi remote add <org>` | | GitHub remoteを追加（エイリアス名をプロンプトで入力） | - |
 | `koi remote remove` | `koi remote rm` | GitHub remoteを削除 | 曖昧検索で選択 |
 | `koi remote list` | `koi remote ls` | remote一覧を表示 | - |
-| `koi remote switch` | | remoteを切り替え | 曖昧検索で選択 |
+| `koi remote set-url <alias> <org>` | | エイリアスのorg名を更新 | - |
 | `koi completion <shell>` | | シェル補完スクリプトを生成（bash/zsh/fish/powershell/elvish） | - |
 
 ### スキル管理ファイル
 
 | ファイル | 用途 |
 |---------|------|
-| `.koi.skills` | プロジェクトローカルのスキル管理。リポジトリにコミットする。`koi clone -r` で一括復元可能。 |
+| `.koi.skills` | プロジェクトローカルのスキル管理。リポジトリにコミットする。`koi restore` で一括復元可能。 |
 | `~/.koi/global.skills` | グローバルスキルのリモートマッピング。sync用。 |
-| `~/.koi/remotes.toml` | 登録済みGitHub remoteの管理。アクティブなremoteも記録。 |
+| `~/.koi/remotes.toml` | 登録済みGitHub remoteの管理（エイリアス名 → org名）。 |
 
 ```toml
 # .koi.skills / ~/.koi/global.skills（同フォーマット）
+# 値はエイリアス名（remotes.tomlのキー）
 [skills]
-moli = "itton-claude-skills/moli"
-expert-skill-make = "itton-claude-skills/expert-skill-make"
+moli = "personal"
+expert-skill-make = "personal"
 ```
 
 ```toml
 # ~/.koi/remotes.toml
-active = "itton-claude-skills"
+# active フィールドなし（koi remote switch 廃止済み）
+[remotes.personal]
+org = "itton-claude-skills"
 
-[remotes]
-itton-claude-skills = { description = "個人スキルリポジトリ" }
-work-org = { description = "業務用スキルリポジトリ" }
+[remotes.work]
+org = "work-org"
 ```
 
 ### シェル補完のインストール
@@ -330,7 +350,7 @@ koi completion powershell > koi.ps1
 
 ### なぜ search, init がないのか
 
-- **search**: `koi clone`が曖昧検索機能を持つため不要
+- **search**: `koi add`が全リモート横断の曖昧検索機能を持つため不要
 - **init**: `expert-skill-make`など既存のClaude Codeスキルがあるため不要
 
 ## 認証
@@ -405,6 +425,22 @@ koi completion powershell > koi.ps1
 - MOLI.mdの内容をCLAUDE.mdに統合（情報の一元化）
 - 技術スタックの明確化: dioxus → ratatui + crossterm + fuzzy-matcher
 - 設定ファイル名の変更: `~/.koi/orgs.toml` → `~/.koi/remotes.toml`
+
+### 2026-02-21: エイリアス名でリモートを管理する仕組みを導入 (v0.3.x, #21-#24)
+
+**変更概要**:
+- `koi remote`: エイリアス名システム導入（git remote名のようにユーザーが命名）
+  - `koi remote add <org>`: エイリアス名をプロンプトで入力（`--name` で直接指定も可）
+  - `koi remote set-url <alias> <org>`: org名変更に対応（`.koi.skills`は変更不要）
+  - `koi remote switch` / `active` フィールド: 廃止
+  - `koi remote remove`: 参照中エイリアスがある場合に警告表示
+- `koi add` (`koi clone`から改名): 全登録リモートを横断検索
+  - 表示形式: `skill-name @alias`（30文字左寄せ + @エイリアス）
+  - ローカル・グローバル両方のインストール済みを除外
+- `koi restore` (`koi clone --restore`から独立): エイリアス→orgを解決してclone
+- `koi new`: リモート選択UI追加（`--remote`/`-r` で直接指定も可）
+- `config.rs`: `RemoteEntry.org` フィールド追加、`resolve_org()` / `validate_alias()` 関数追加
+- エイリアス名バリデーション: 英数字・ハイフン・アンダースコアのみ
 
 ### 2026-02-21: エイリアス導入に伴うデータ移行手順 (#24)
 

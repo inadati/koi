@@ -5,13 +5,35 @@ use crate::github::api::{gh_api_post, gh_api_put};
 use crate::github::auth::ensure_gh_ready;
 use crate::skill::lockfile::add_skill;
 use crate::skill::path::{skill_path, skills_dir};
+use crate::ui::fuzzy::select_from_list;
 use crate::ui::progress;
-use crate::utils::config::get_org;
+use crate::utils::config::{load_remotes, resolve_org};
 use crate::utils::error::{KoiError, Result};
 
-pub fn run(name: &str) -> Result<()> {
+pub fn run(name: &str, remote_alias: Option<String>) -> Result<()> {
     ensure_gh_ready()?;
-    let org = get_org()?;
+
+    let remotes = load_remotes()?;
+    if remotes.remotes.is_empty() {
+        return Err(KoiError::RemoteNotFound(
+            "リモートが登録されていません。`koi remote add` で追加してください".to_string(),
+        ));
+    }
+
+    // リモートエイリアスを決定
+    let alias = match remote_alias {
+        Some(a) => a,
+        None => {
+            let remote_names: Vec<String> = remotes.remotes.keys().cloned().collect();
+            if remote_names.len() == 1 {
+                remote_names.into_iter().next().unwrap()
+            } else {
+                select_from_list(&remote_names, "作成先のremoteを選択:")?
+            }
+        }
+    };
+
+    let org = resolve_org(&alias, &remotes)?;
 
     let dest = skill_path(false, name)?;
     if dest.exists() {
@@ -25,10 +47,7 @@ pub fn run(name: &str) -> Result<()> {
         "private": true,
         "auto_init": true,
     });
-    gh_api_post(
-        &format!("orgs/{}/repos", org),
-        &repo_body.to_string(),
-    )?;
+    gh_api_post(&format!("orgs/{}/repos", org), &repo_body.to_string())?;
 
     // 2. SKILL.mdテンプレートを配置
     let skill_md_content = format!("# {}\n\nスキルの説明をここに記載してください。\n", name);
@@ -49,9 +68,8 @@ pub fn run(name: &str) -> Result<()> {
     progress::info(&format!("{} をクローン中...", name));
     clone_skill(&org, name, &dest)?;
 
-    // 4. .koi.skillsに追記
-    let repo_ref = format!("{}/{}", org, name);
-    add_skill(false, name, &repo_ref)?;
+    // 4. .koi.skillsに追記（エイリアス名を記録）
+    add_skill(false, name, &alias)?;
 
     progress::success(&format!("{} を作成しました", name));
     Ok(())

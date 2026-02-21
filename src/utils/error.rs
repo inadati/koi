@@ -32,8 +32,11 @@ pub enum KoiError {
     #[error("Skill already installed: {0}")]
     SkillAlreadyInstalled(String),
 
-    #[error("Config not found: org is not set. Please run: koi remote add <org>")]
-    OrgNotSet,
+    #[error("Remote not found: {0}")]
+    RemoteNotFound(String),
+
+    #[error("Invalid alias name: '{0}'. Use alphanumeric characters, hyphens, or underscores only.")]
+    InvalidAlias(String),
 
     #[error("User cancelled")]
     Cancelled,

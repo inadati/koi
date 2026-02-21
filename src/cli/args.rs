@@ -33,6 +33,9 @@ pub enum Commands {
     New {
         /// スキル名
         name: String,
+        /// リモートエイリアス名
+        #[arg(short, long)]
+        remote: Option<String>,
     },
     /// リモート操作
     Remote {
@@ -64,23 +67,28 @@ pub enum Commands {
 
 #[derive(Subcommand)]
 pub enum RemoteCommands {
-    /// GitHub remoteを追加
+    /// GitHub remoteを追加（GitHubのorganization名を指定）
     Add {
-        /// org名
+        /// GitHub organization名
         org: String,
+        /// エイリアス名（省略時は対話的に入力）
+        #[arg(short, long)]
+        name: Option<String>,
     },
     /// GitHub remoteを削除
     #[command(alias = "rm")]
     Remove {
-        /// org名（省略時は曖昧検索）
-        org: Option<String>,
+        /// エイリアス名（省略時は曖昧検索）
+        alias: Option<String>,
     },
     /// remote一覧を表示
     #[command(alias = "ls")]
     List,
-    /// remoteを切り替え
-    Switch {
-        /// org名（省略時は曖昧検索）
-        org: Option<String>,
+    /// remoteのorg名を更新（GitHub org名が変わったときに使用）
+    SetUrl {
+        /// エイリアス名
+        alias: String,
+        /// 新しいGitHub organization名
+        org: String,
     },
 }

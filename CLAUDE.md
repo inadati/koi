@@ -406,6 +406,35 @@ koi completion powershell > koi.ps1
 - 技術スタックの明確化: dioxus → ratatui + crossterm + fuzzy-matcher
 - 設定ファイル名の変更: `~/.koi/orgs.toml` → `~/.koi/remotes.toml`
 
+### 2026-02-21: エイリアス導入に伴うデータ移行手順 (#24)
+
+`remotes.toml` と `.koi.skills` のフォーマットが変わる。手動で以下を修正する。
+
+**`~/.koi/remotes.toml`**
+
+```toml
+# 変更前
+active = "itton-claude-skills"
+[remotes]
+itton-claude-skills = { description = "個人スキルリポジトリ" }
+
+# 変更後（active削除、org明示）
+[remotes.personal]
+org = "itton-claude-skills"
+```
+
+**各プロジェクトの `.koi.skills`**
+
+```toml
+# 変更前
+[skills]
+moli = "itton-claude-skills/moli"
+
+# 変更後（エイリアス名のみ）
+[skills]
+moli = "personal"
+```
+
 ### 2026-02-10: シェル補完機能の追加 (v0.1.1)
 
 - **シェル補完機能の実装**

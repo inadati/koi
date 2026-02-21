@@ -75,7 +75,13 @@ fn build_cli() -> Command {
         .subcommand(
             Command::new("new")
                 .about("新規スキルを作成")
-                .arg(Arg::new("name").help("スキル名").required(true)),
+                .arg(Arg::new("name").help("スキル名").required(true))
+                .arg(
+                    Arg::new("remote")
+                        .short('r')
+                        .long("remote")
+                        .help("リモートエイリアス名"),
+                ),
         )
         .subcommand(
             Command::new("remote")
@@ -83,14 +89,24 @@ fn build_cli() -> Command {
                 .subcommand_required(true)
                 .subcommand(
                     Command::new("add")
-                        .about("remoteを追加")
-                        .arg(Arg::new("org").help("GitHub org名").required(true)),
+                        .about("remoteを追加（GitHubのorganization名を指定）")
+                        .arg(
+                            Arg::new("org")
+                                .help("GitHub organization名")
+                                .required(true),
+                        )
+                        .arg(
+                            Arg::new("name")
+                                .short('n')
+                                .long("name")
+                                .help("エイリアス名（省略時は対話的に入力）"),
+                        ),
                 )
                 .subcommand(
                     Command::new("remove")
                         .about("remoteを削除")
                         .alias("rm")
-                        .arg(Arg::new("org").help("GitHub org名")),
+                        .arg(Arg::new("alias").help("エイリアス名")),
                 )
                 .subcommand(
                     Command::new("list")
@@ -98,9 +114,14 @@ fn build_cli() -> Command {
                         .alias("ls"),
                 )
                 .subcommand(
-                    Command::new("switch")
-                        .about("remoteを切り替え")
-                        .arg(Arg::new("org").help("GitHub org名")),
+                    Command::new("set-url")
+                        .about("remoteのorg名を更新（GitHub org名が変わったときに使用）")
+                        .arg(Arg::new("alias").help("エイリアス名").required(true))
+                        .arg(
+                            Arg::new("org")
+                                .help("新しいGitHub organization名")
+                                .required(true),
+                        ),
                 ),
         )
         .subcommand(

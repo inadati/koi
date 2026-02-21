@@ -7,27 +7,42 @@ use crate::skill::lockfile::{add_skill, load_lockfile};
 use crate::skill::path::{skill_path, skills_dir};
 use crate::ui::fuzzy::select_multiple_from_list;
 use crate::ui::progress;
-use crate::utils::config::get_org;
+use crate::utils::config::{load_remotes, resolve_org};
 use crate::utils::error::{KoiError, Result};
 
 pub fn run(name: Option<String>, global: bool) -> Result<()> {
     ensure_gh_ready()?;
-    let org = get_org()?;
+
+    let remotes = load_remotes()?;
+    if remotes.remotes.is_empty() {
+        return Err(KoiError::RemoteNotFound(
+            "リモートが登録されていません。`koi remote add` で追加してください".to_string(),
+        ));
+    }
+
+    // 暫定: 最初のリモートを使用（#21で全リモート横断検索に変更予定）
+    let (alias, _) = remotes.remotes.iter().next().unwrap();
+    let alias = alias.clone();
+    let org = resolve_org(&alias, &remotes)?;
 
     let repo_names = match name {
         Some(n) => vec![n],
         None => {
             progress::info("リモートリポジトリを取得中...");
             let repos = list_org_repo_names(&org)?;
-            let installed = load_lockfile(global)?;
+            let installed_local = load_lockfile(false).unwrap_or_default();
+            let installed_global = load_lockfile(true).unwrap_or_default();
             let repos: Vec<String> = repos
                 .into_iter()
-                .filter(|r| !installed.skills.contains_key(r))
+                .filter(|r| {
+                    !installed_local.skills.contains_key(r)
+                        && !installed_global.skills.contains_key(r)
+                })
                 .collect();
             if repos.is_empty() {
                 return Err(KoiError::SkillNotFound(format!(
-                    "org '{}' に追加可能なスキルがありません",
-                    org
+                    "remote '{}' に追加可能なスキルがありません",
+                    alias
                 )));
             }
             select_multiple_from_list(&repos, "追加するスキルを選択:")?
@@ -48,8 +63,7 @@ pub fn run(name: Option<String>, global: bool) -> Result<()> {
         progress::info(&format!("{} を追加中...", repo_name));
         match clone_skill(&org, repo_name, &dest) {
             Ok(()) => {
-                let repo_ref = format!("{}/{}", org, repo_name);
-                add_skill(global, repo_name, &repo_ref)?;
+                add_skill(global, repo_name, &alias)?;
                 progress::success(&format!("{} を追加しました", repo_name));
             }
             Err(e) => {

@@ -67,13 +67,12 @@ pub enum Commands {
 
 #[derive(Subcommand)]
 pub enum RemoteCommands {
-    /// GitHub remoteを追加（GitHubのorganization名を指定）
+    /// GitHub remoteを追加
     Add {
+        /// エイリアス名
+        alias: String,
         /// GitHub organization名
         org: String,
-        /// エイリアス名（省略時は対話的に入力）
-        #[arg(short, long)]
-        name: Option<String>,
     },
     /// GitHub remoteを削除
     #[command(alias = "rm")]

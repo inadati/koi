@@ -34,7 +34,7 @@ esac
 
 INSTALL_TARGET="koi-${VERSION}-${TARGET}.tar.gz"
 
-HOME_BIN="$HOME/.bin"
+HOME_BIN="$HOME/.local/bin"
 if [ ! -e "$HOME_BIN" ]; then
     mkdir -p $HOME_BIN
     echo "[info] Created directory because $HOME_BIN was not found."
@@ -63,13 +63,13 @@ MESSAGES=""
 
 # PATH チェック
 if [ "${PATH#*$HOME_BIN}" = "$PATH" ]; then
-    MESSAGES="${MESSAGES}echo 'export PATH=\"\$PATH:\$HOME/.bin\"' >> $SHELL_RC\n"
+    MESSAGES="${MESSAGES}echo 'export PATH=\"\$PATH:\$HOME/.local/bin\"' >> $SHELL_RC\n"
 fi
 
 # エイリアスチェック
 alias_name="koi_install"
 if ! grep -q "$alias_name" "$SHELL_RC" 2>/dev/null; then
-    MESSAGES="${MESSAGES}echo 'alias ${alias_name}=\"gh release download --repo ${REPO} -p '\"'\"'koi-*-${TARGET}.tar.gz'\"'\"' --output - | tar -xzf - -C \\\$HOME/.bin && exec \\\$SHELL -l\"' >> $SHELL_RC\n"
+    MESSAGES="${MESSAGES}echo 'alias ${alias_name}=\"gh release download --repo ${REPO} -p '\"'\"'koi-*-${TARGET}.tar.gz'\"'\"' --output - | tar -xzf - -C \\\$HOME/.local/bin && exec \\\$SHELL -l\"' >> $SHELL_RC\n"
 fi
 
 # メッセージがある場合のみ表示

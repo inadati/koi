@@ -126,7 +126,7 @@ org = "my-basic-skills"
 org = "my-engineer-skills"
 ```
 
-## なぜ clone/pull/push ではなく add/restore/sync なのか
+## koi syncはリモートとローカルを適切に同期します。
 
 npm/cargoなどのパッケージマネージャーは、作者がpublishし利用者がinstallする**一方向**の関係です。koiでは同一人物がスキルの取得と公開を行う**双方向**の管理を行います。`sync`がpull + pushを統合し、`add`で全リモートを横断検索、`restore`で環境の一括復元を行います。
 
@@ -142,12 +142,6 @@ koi completion bash > /usr/local/etc/bash_completion.d/koi
 # Fish
 koi completion fish > ~/.config/fish/completions/koi.fish
 ```
-
-## 技術スタック
-
-- **Rust** + **clap**（CLI）
-- **ratatui** + **crossterm** + **fuzzy-matcher**（対話的UI）
-- **gh CLI** + **git**（GitHub API・リポジトリ操作）
 
 ## License
 

@@ -1,5 +1,6 @@
 [skills]
-git-commit = "claude-engineering-skills/git-commit"
+git-solo = "claude-engineering-skills"
 moli = "claude-engineering-skills/moli"
+plan-review = "claude-basic-skills"
 skill-edit = "claude-basic-skills/skill-edit"
 skill-make = "claude-basic-skills/skill-make"

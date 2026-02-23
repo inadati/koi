@@ -12,7 +12,7 @@ pub fn run(cli: Cli) -> Result<()> {
             remote: remote_alias,
         } => new::run(&name, remote_alias),
         Commands::Remote { command } => match command {
-            RemoteCommands::Add { org, name } => remote::run_add(&org, name),
+            RemoteCommands::Add { alias, org } => remote::run_add(&alias, &org),
             RemoteCommands::Remove { alias } => remote::run_remove(alias),
             RemoteCommands::List => remote::run_list(),
             RemoteCommands::SetUrl { alias, org } => remote::run_set_url(&alias, &org),

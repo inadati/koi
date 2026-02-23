@@ -1,31 +1,18 @@
 use crate::skill::lockfile::load_lockfile;
 use crate::ui::fuzzy::select_from_list;
 use crate::ui::progress;
-use crate::ui::prompt::input_text;
+
 use crate::utils::config::{load_remotes, save_remotes, validate_alias, RemoteEntry};
 use crate::utils::error::{KoiError, Result};
 
-pub fn run_add(org: &str, name: Option<String>) -> Result<()> {
+pub fn run_add(alias: &str, org: &str) -> Result<()> {
     let mut remotes = load_remotes()?;
 
-    // エイリアス名を決定
-    let alias = match name {
-        Some(n) => {
-            if !validate_alias(&n) {
-                return Err(KoiError::InvalidAlias(n));
-            }
-            n
-        }
-        None => loop {
-            let input = input_text(
-                "エイリアス名を入力してください (英数字・ハイフン・アンダースコアのみ)",
-            )?;
-            if validate_alias(&input) {
-                break input;
-            }
-            progress::warn("無効なエイリアス名です。英数字・ハイフン・アンダースコアのみ使用できます");
-        },
-    };
+    // エイリアス名のバリデーション
+    if !validate_alias(alias) {
+        return Err(KoiError::InvalidAlias(alias.to_string()));
+    }
+    let alias = alias.to_string();
 
     // エイリアス重複チェック
     if remotes.remotes.contains_key(&alias) {

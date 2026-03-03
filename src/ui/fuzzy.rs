@@ -13,11 +13,10 @@ use ratatui::widgets::*;
 
 use crate::utils::error::{KoiError, Result};
 
-const MAX_VISIBLE: usize = 15;
-
 struct FuzzySelectState {
     query: String,
     selected: usize,
+    scroll_offset: usize,
     items: Vec<String>,
     multi_select: bool,
     checked: HashSet<usize>,
@@ -28,6 +27,7 @@ impl FuzzySelectState {
         Self {
             query: String::new(),
             selected: 0,
+            scroll_offset: 0,
             items,
             multi_select,
             checked: HashSet::new(),
@@ -64,13 +64,24 @@ impl FuzzySelectState {
     fn move_up(&mut self) {
         if self.selected > 0 {
             self.selected -= 1;
+            if self.selected < self.scroll_offset {
+                self.scroll_offset = self.selected;
+            }
         }
     }
 
-    fn move_down(&mut self, max: usize) {
+    fn move_down(&mut self, max: usize, max_visible: usize) {
         if max > 0 && self.selected < max - 1 {
             self.selected += 1;
+            if self.selected >= self.scroll_offset + max_visible {
+                self.scroll_offset = self.selected + 1 - max_visible;
+            }
         }
+    }
+
+    fn reset_selection(&mut self) {
+        self.selected = 0;
+        self.scroll_offset = 0;
     }
 }
 
@@ -131,8 +142,11 @@ fn run_loop(
         let filtered = state.filtered();
         let filtered_len = filtered.len();
 
+        let term_height = terminal.size().map(|s| s.height as usize).unwrap_or(24);
+        let max_visible = term_height.saturating_sub(4).max(1);
+
         terminal.draw(|f| {
-            render(f, state, &filtered, prompt_msg);
+            render(f, state, &filtered, prompt_msg, max_visible);
         })?;
 
         if let Event::Key(key) = event::read()? {
@@ -162,18 +176,18 @@ fn run_loop(
                     let filtered = state.filtered();
                     if let Some((original_idx, _)) = filtered.get(state.selected) {
                         state.toggle_checked(*original_idx);
-                        state.move_down(filtered_len);
+                        state.move_down(filtered_len, max_visible);
                     }
                 }
                 KeyCode::Up => state.move_up(),
-                KeyCode::Down => state.move_down(filtered_len),
+                KeyCode::Down => state.move_down(filtered_len, max_visible),
                 KeyCode::Backspace => {
                     state.query.pop();
-                    state.selected = 0;
+                    state.reset_selection();
                 }
                 KeyCode::Char(c) => {
                     state.query.push(c);
-                    state.selected = 0;
+                    state.reset_selection();
                 }
                 _ => {}
             }
@@ -186,6 +200,7 @@ fn render(
     state: &FuzzySelectState,
     filtered: &[(usize, &String)],
     prompt_msg: &str,
+    max_visible: usize,
 ) {
     let area = f.area();
 
@@ -220,14 +235,15 @@ fn render(
         .style(Style::default().fg(Color::DarkGray));
     f.render_widget(sep, chunks[2]);
 
-    // List
-    let visible_count = filtered.len().min(MAX_VISIBLE);
-    let list_items: Vec<ListItem> = filtered
+    // List (scrollable window)
+    let end = filtered.len().min(state.scroll_offset + max_visible);
+    let visible = &filtered[state.scroll_offset..end];
+    let list_items: Vec<ListItem> = visible
         .iter()
-        .take(MAX_VISIBLE)
         .enumerate()
         .map(|(i, (original_idx, item))| {
-            let is_cursor = i == state.selected;
+            let absolute_idx = state.scroll_offset + i;
+            let is_cursor = absolute_idx == state.selected;
             let is_checked = state.multi_select && state.checked.contains(original_idx);
 
             let prefix = if is_cursor && is_checked {
@@ -260,10 +276,12 @@ fn render(
     f.render_widget(list, chunks[3]);
 
     // Help
-    let count_info = if filtered.len() > visible_count {
-        format!(" ({}/{})", visible_count, filtered.len())
+    let total = filtered.len();
+    let count_info = if total > max_visible {
+        let showing_to = end;
+        format!(" ({}-{}/{})", state.scroll_offset + 1, showing_to, total)
     } else {
-        format!(" ({})", filtered.len())
+        format!(" ({})", total)
     };
     let help_text = if state.multi_select {
         format!(
